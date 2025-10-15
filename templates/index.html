@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<!--
+=============================================================================
+GÜVENLİ MESAJLAŞMA WEB ARAYÜZÜ
+=============================================================================
+Bu dosya TCP Socket backend'ine modern web arayüzü sağlar
+
+ÖZELLİKLER:
+- Modern, responsive tasarım
+- Gerçek zamanlı mesajlaşma (WebSocket)
+- Kullanıcı kayıt/giriş sistemi
+- Grup mesajlaşması
+- Çevrimdışı mesaj desteği
+- Kalıcı sohbet geçmişi (localStorage)
+- Online/offline durum göstergeleri
+
+TEKNOLOJİLER:
+- HTML5: Semantic markup
+- CSS3: Modern styling, flexbox, grid
+- JavaScript: ES6+, Socket.IO client
+- WebSocket: Gerçek zamanlı iletişim
+=============================================================================
+-->
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Güvenli Mesajlaşma - TCP Socket</title>
+    
+    <!-- CSS Stilleri - Modern ve responsive tasarım -->
+    <style>
+        /* =============================================================================
+           CSS STİLLERİ - MODERN VE RESPONSİVE TASARIM
+           ============================================================================= */
+        
+        /* Reset ve temel stiller */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Ana sayfa düzeni */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header (Başlık) stilleri */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.logged-in {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .chat-container {
+            display: none;
+            height: 500px;
+            flex-direction: column;
+        }
+
+        .chat-container.active {
+            display: flex;
+        }
+
+        .chat-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .chat-tab {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            margin-right: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .chat-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .chat-tab:hover {
+            background: #ddd;
+        }
+
+        .chat-tab.active:hover {
+            background: #5a6fd8;
+        }
+
+        .messages-container {
+            height: 450px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .message.own {
+            margin-left: auto;
+            background: #667eea;
+            color: white;
+        }
+
+        .message.own .message-header {
+            color: #e0e0e0;
+        }
+
+        .message.own .message-time {
+            color: #c0c0c0;
+        }
+
+        .message.offline {
+            border: 2px dashed #ff9800;
+            background: #fff8e1 !important;
+            opacity: 0.8;
+        }
+
+        .message.offline .message-header {
+            color: #e65100;
+            font-weight: bold;
+        }
+
+        .message.offline::before {
+            content: "📬 ";
+            font-size: 1.2em;
+        }
+
+        .message.broadcast {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+        }
+
+        .message.direct {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .message.group {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
+        }
+
+        .message.system {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .message-header {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .message-content {
+            color: #333;
+        }
+
+        .message-time {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .input-group .btn {
+            width: auto;
+            margin: 0;
+            padding: 10px 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            background: #4CAF50;
+        }
+
+        .notification.error {
+            background: #f44336;
+        }
+
+        .notification.info {
+            background: #2196F3;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        /* Kullanıcı Listesi Stilleri */
+        .user-item, .group-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .user-item:hover, .group-item:hover {
+            background: #f0f0f0;
+        }
+
+        .user-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px #ddd;
+        }
+
+        .user-item.online .user-status {
+            background: #4CAF50;
+            box-shadow: 0 0 0 1px #4CAF50, 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+
+        .user-item.offline .user-status {
+            background: #ccc;
+        }
+
+        .user-name, .group-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .user-item.offline .user-name {
+            color: #888;
+        }
+
+        .group-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .separator {
+            height: 1px;
+            background: #eee;
+            margin: 15px 0;
+        }
+
+        /* Grup İşlemleri Stilleri */
+        .group-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.9em;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .btn-small:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-danger {
+            background: #dc3545 !important;
+        }
+
+        .btn-danger:hover {
+            background: #c82333 !important;
+        }
+
+        /* Giriş/Kayıt Form Stilleri */
+        #login-form {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        #login-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        #login-form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        #login-form input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        #login-form input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        #login-form input:disabled {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        #login-form button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        #login-form .btn {
+            width: 100%;
+            margin: 8px 0;
+            padding: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        /* Çıkış Butonu */
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        /* Kullanıcı Durumu */
+        #user-status {
+            background: #e8f5e8;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            color: #155724;
+            margin: 15px 0;
+        }
+
+        #user-status.logged-in {
+            background: #d4edda;
+        }
+
+        /* Auth Container Stilleri */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: white;
+            padding: 50px;
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .auth-header {
+            margin-bottom: 30px;
+        }
+
+        .auth-header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .auth-header p {
+            color: #666;
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        .group-item.clickable {
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .group-item.clickable:hover {
+            background: #f0f0f0;
+        }
+
+        /* Sohbet Listesi Stilleri */
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .chat-item:hover {
+            background: #f0f0f0;
+        }
+
+        .chat-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #5a6fd8;
+        }
+
+        .chat-item.active .chat-name,
+        .chat-item.active .chat-last-message {
+            color: white;
+        }
+
+        .chat-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            font-size: 18px;
+        }
+
+        .chat-info {
+            flex: 1;
+        }
+
+        .chat-name {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .chat-last-message {
+            font-size: 0.9em;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Mesaj Alanı Güncellemeleri */
+        .chat-section {
+            display: none;
+        }
+
+        .chat-section.active {
+            display: block;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 250px 1fr 1.5fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Giriş Ekranı -->
+        <div class="auth-container" id="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1>🔒 Güvenli Mesajlaşma</h1>
+                    <p>TCP Socket Tabanlı Gerçek Zamanlı Mesajlaşma Sistemi</p>
+                </div>
+                
+                <!-- TCP Bağlantı Ayarları -->
+                <div class="form-group">
+                    <label>🌐 TCP Sunucu Adresi:</label>
+                    <input type="text" id="tcp-host" value="localhost" placeholder="localhost">
+                </div>
+                <div class="form-group">
+                    <label>🔌 Port:</label>
+                    <input type="number" id="tcp-port" value="5000" placeholder="5000">
+                </div>
+                <button class="btn" onclick="connectToTCP()">🔗 TCP Sunucusuna Bağlan</button>
+                
+                <!-- Giriş Formu -->
+                <div id="login-form" style="margin-top: 30px;">
+                    <h3 style="text-align: center; margin-bottom: 25px; color: #333; font-size: 1.5em;">🚀 Hoş Geldiniz!</h3>
+                <div class="form-group">
+                        <label>👤 Kullanıcı Adı:</label>
+                        <input type="text" id="username" placeholder="Kullanıcı adınızı girin">
+                </div>
+                <div class="form-group">
+                        <label>🔒 Şifre:</label>
+                        <input type="password" id="password" placeholder="Şifrenizi girin">
+                </div>
+                    <button class="btn btn-success" onclick="login()">✅ Giriş Yap</button>
+                    <button class="btn btn-info" onclick="register()">📝 Kayıt Ol</button>
+    </div>
+
+                <div id="user-status" class="status hidden">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.2em; margin-bottom: 10px;">👤 Hoş Geldiniz!</div>
+                        <div id="current-username" style="font-weight: bold; color: #28a745;"></div>
+                        <button class="logout-btn" onclick="logout()">🚪 Çıkış Yap</button>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+        <!-- Ana İçerik -->
+        <div class="header" id="main-header" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>🔒 Güvenli Mesajlaşma</h1>
+                    <p>TCP Socket Tabanlı Gerçek Zamanlı Mesajlaşma Sistemi</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span id="current-user-display" style="color: #28a745; font-weight: bold;"></span>
+                    <button class="logout-btn" onclick="logout()">🚪 Çıkış Yap</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content" id="main-content" style="display: none;">
+            <!-- Sol Panel: Kullanıcı ve Grup Listesi -->
+            <div class="card" id="users-panel">
+                <h2>👥 Kullanıcılar ve Gruplar</h2>
+                
+                <div id="users-list">
+                    <div class="user-item offline">
+                        <div class="user-status"></div>
+                        <div class="user-name">Kullanıcı yok</div>
+            </div>
+        </div>
+        
+                <div class="separator"></div>
+                
+                <div id="groups-list">
+                    <div class="group-item" id="no-groups">
+                        <div class="group-icon">👥</div>
+                        <div class="group-name">Grup yok</div>
+            </div>
+        </div>
+        
+                <!-- Grup İşlemleri -->
+                <div class="separator"></div>
+                <div class="group-actions">
+                    <button class="btn btn-small" onclick="createGroup()">➕ Grup Oluştur</button>
+                    <button class="btn btn-small" onclick="joinGroup()">🔗 Gruba Katıl</button>
+            </div>
+        
+                <!-- Chat History İşlemleri -->
+                <div class="separator"></div>
+                <div class="group-actions">
+                    <button class="btn btn-small btn-danger" onclick="clearChatHistory()">🗑️ Geçmişi Temizle</button>
+        </div>
+    </div>
+
+            <!-- Orta Panel: Sohbet Listesi -->
+            <div class="card" id="chats-panel">
+                <h2>💬 Sohbetler</h2>
+                
+                <div id="chat-list">
+                    <div class="chat-item active" onclick="selectChat('broadcast')">
+                        <div class="chat-icon">📢</div>
+                        <div class="chat-info">
+                            <div class="chat-name">Herkese</div>
+                            <div class="chat-last-message">Genel mesajlar</div>
+                        </div>
+            </div>
+        </div>
+    </div>
+
+        
+            <!-- Dördüncü Panel: Mesajlaşma -->
+            <div class="card" id="messaging-panel">
+                <h2 id="chat-title">💬 Herkese</h2>
+                
+                <div id="chat-container" class="chat-container" style="display: none;">
+                    <!-- Mesajlar -->
+                    <div id="messages-container" class="messages-container">
+                        <div class="message system">
+                            Mesajlaşmaya başlamak için giriş yapın...
+            </div>
+        </div>
+        
+                    <!-- Broadcast Mesaj -->
+                    <div id="broadcast-chat" class="chat-section active">
+                        <div class="input-group">
+                            <input type="text" id="broadcast-message" placeholder="Herkese mesaj yazın..." onkeypress="handleKeyPress(event, 'broadcast')">
+                            <button class="btn" onclick="sendBroadcast()">📢 Gönder</button>
+            </div>
+        </div>
+        
+                    <!-- Özel Mesaj -->
+                    <div id="direct-chat" class="chat-section">
+                        <div class="input-group">
+                            <input type="text" id="direct-receiver" placeholder="Alıcı kullanıcı adı" readonly>
+                            <input type="text" id="direct-message" placeholder="Özel mesaj yazın..." onkeypress="handleKeyPress(event, 'direct')">
+                            <button class="btn" onclick="sendDirect()">💌 Gönder</button>
+            </div>
+        </div>
+        
+                    <!-- Grup Mesajı -->
+                    <div id="group-chat" class="chat-section">
+                        <div class="input-group">
+                            <input type="text" id="group-name" placeholder="Grup adı" readonly>
+                            <input type="text" id="group-message" placeholder="Grup mesajı yazın..." onkeypress="handleKeyPress(event, 'group')">
+                            <button class="btn" onclick="sendGroupMessage()">👥 Gönder</button>
+                        </div>
+                        <div class="input-group" style="margin-top: 10px;">
+                            <button class="btn btn-info" onclick="createGroup()">➕ Grup Oluştur</button>
+                            <button class="btn btn-info" onclick="joinGroup()">🔗 Gruba Katıl</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.IO ve JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        /* =============================================================================
+           JAVASCRIPT - WEB ARAYÜZÜ KONTROLÜ
+           =============================================================================
+           Bu bölüm web arayüzünün tüm işlevselliğini kontrol eder
+           
+           Ana Fonksiyonlar:
+           - Socket.IO bağlantısı ve mesaj yönetimi
+           - Kullanıcı kimlik doğrulama
+           - Mesaj gönderme/alma
+           - Chat geçmişi yönetimi
+           - UI güncellemeleri
+           ============================================================================= */
+        
+        // =============================================================================
+        // GLOBAL DEĞİŞKENLER
+        // =============================================================================
+        
+        // Socket.IO bağlantısı (Flask-SocketIO ile gerçek zamanlı iletişim)
+        const socket = io();
+        
+        // Uygulama durumu değişkenleri
+        let currentTab = 'broadcast';      // Aktif sekme (broadcast, direct, group)
+        let isLoggedIn = false;           // Kullanıcı giriş durumu
+        let sessionId = null;             // WebSocket session ID
+        let currentChat = 'broadcast';    // Aktif sohbet (broadcast, direct-username, group-groupname)
+        let onlineUsers = [];             // Çevrimiçi kullanıcı listesi
+        
+        // Chat history'yi localStorage'dan yükle veya yeni oluştur
+        // Bu sayede sayfa yenilenmesinde mesajlar kaybolmaz
+        let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || {
+            broadcast: [],    // Herkese gönderilen mesajlar
+            direct: {},       // Özel mesajlar (kullanıcı adına göre)
+            group: {}         // Grup mesajları (grup adına göre)
+        };
+
+        // =============================================================================
+        // SOCKET.IO EVENT LISTENERS
+        // =============================================================================
+        // WebSocket bağlantısı ve mesaj dinleme işlemleri
+        
+        // WebSocket bağlantısı kurulduğunda
+        socket.on('connect', function() {
+            sessionId = socket.id;
+            showNotification('Web sunucusuna bağlandı', 'success');
+        });
+
+        socket.on('disconnect', function() {
+            showNotification('Web sunucusu bağlantısı kesildi', 'error');
+        });
+
+        socket.on('tcp_message', function(message) {
+            handleTCPMessage(message);
+        });
+
+        socket.on('group_created', function(data) {
+            if (data.success) {
+                showNotification('Grup başarıyla oluşturuldu!', 'success');
+            } else {
+                showNotification('Grup oluşturulamadı: ' + data.message, 'error');
+            }
+        });
+
+        socket.on('group_joined', function(data) {
+            if (data.success) {
+                showNotification('Gruba başarıyla katıldınız!', 'success');
+            } else {
+                showNotification('Gruba katılamadı: ' + data.message, 'error');
+            }
+        });
+
+        socket.on('error', function(data) {
+            showNotification(data.message, 'error');
+        });
+
+        // Sayfa yüklendiğinde chat history'yi göster
+        window.addEventListener('load', function() {
+            // Eğer chat history varsa, broadcast mesajlarını göster
+            if (chatHistory.broadcast.length > 0) {
+                displayChatHistory('broadcast');
+                showNotification(`📜 ${chatHistory.broadcast.length} eski mesaj yüklendi`, 'info');
+            }
+            
+            // Giriş formunu başlangıçta deaktif et
+            const loginForm = document.getElementById('login-form');
+            const inputs = loginForm.querySelectorAll('input[type="text"], input[type="password"]');
+            const buttons = loginForm.querySelectorAll('button[onclick="login()"], button[onclick="register()"]');
+            
+            inputs.forEach(input => input.disabled = true);
+            buttons.forEach(button => button.disabled = true);
+            
+            showNotification('🔗 Önce TCP sunucusuna bağlanın', 'info');
+        });
+
+        // Chat history temizleme fonksiyonu
+        function clearChatHistory() {
+            chatHistory = {
+                broadcast: [],
+                direct: {},
+                group: {}
+            };
+            localStorage.removeItem('chatHistory');
+            displayChatHistory('broadcast');
+            showNotification('💬 Sohbet geçmişi temizlendi', 'success');
+        }
+
+        // Çıkış yapma fonksiyonu
+        function logout() {
+            // Ana içeriği gizle, giriş ekranını göster
+            document.getElementById('auth-container').style.display = 'flex';
+            document.getElementById('main-header').style.display = 'none';
+            document.getElementById('main-content').style.display = 'none';
+            
+            // Giriş formunu göster, kullanıcı durumunu gizle
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('user-status').classList.add('hidden');
+            
+            // Kullanıcı durumunu sıfırla
+            isLoggedIn = false;
+            currentChat = 'broadcast';
+            window.currentUsername = null;
+            
+            // Header'dan kullanıcı adını temizle
+            document.getElementById('current-user-display').textContent = '';
+            
+            // Form alanlarını temizle
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            
+            // TCP bağlantısını kapat
+            if (tcp_socket) {
+                tcp_socket.close();
+                tcp_socket = null;
+                tcp_connected = false;
+            }
+            
+            showNotification('👋 Başarıyla çıkış yapıldı', 'success');
+        }
+
+        // TCP bağlantısı
+        function connectToTCP() {
+            const host = document.getElementById('tcp-host').value;
+            const port = document.getElementById('tcp-port').value;
+
+            if (!sessionId) {
+                showNotification('WebSocket bağlantısı kurulmadı!', 'error');
+                return;
+            }
+
+            fetch('/api/connect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ host, port, session_id: sessionId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('TCP sunucusuna bağlandı! Giriş yapabilirsiniz.', 'success');
+                    
+                    // Giriş formunu aktif et
+                    const loginForm = document.getElementById('login-form');
+                    const inputs = loginForm.querySelectorAll('input');
+                    const buttons = loginForm.querySelectorAll('button');
+                    
+                    inputs.forEach(input => input.disabled = false);
+                    buttons.forEach(button => button.disabled = false);
+                    
+                    // Focus kullanıcı adına
+                    document.getElementById('username').focus();
+                } else {
+                    showNotification('TCP sunucusuna bağlanılamadı: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showNotification('Bağlantı hatası: ' + error, 'error');
+            });
+        }
+
+        // Kullanıcı girişi
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showNotification('Kullanıcı adı ve şifre gereklidir!', 'error');
+                return;
+            }
+
+            if (!sessionId) {
+                showNotification('WebSocket bağlantısı kurulmadı!', 'error');
+                return;
+            }
+
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password, session_id: sessionId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Giriş mesajı gönderildi', 'info');
+                } else {
+                    showNotification('Giriş hatası: ' + data.message, 'error');
+                }
+            });
+        }
+
+        // Kullanıcı kaydı
+        function register() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!sessionId) {
+                showNotification('WebSocket bağlantısı kurulmadı!', 'error');
+                return;
+            }
+
+            fetch('/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password, session_id: sessionId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Kayıt mesajı gönderildi', 'info');
+                } else {
+                    showNotification('Kayıt hatası: ' + data.message, 'error');
+                }
+            });
+        }
+
+
+        function createGroup() {
+            const groupName = prompt('Grup adı girin:');
+            if (groupName && groupName.trim()) {
+                socket.emit('create_group', { group_name: groupName.trim(), session_id: sessionId });
+                showNotification('Grup oluşturuluyor...', 'info');
+            }
+        }
+
+        function joinGroup() {
+            const groupName = prompt('Katılacağınız grup adını girin:');
+            if (groupName && groupName.trim()) {
+                socket.emit('join_group', { group_name: groupName.trim(), session_id: sessionId });
+                showNotification('Gruba katılıyor...', 'info');
+            }
+        }
+
+        // Tab değiştirme
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Tab butonlarını güncelle
+            document.querySelectorAll('.chat-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Chat bölümlerini güncelle
+            document.querySelectorAll('.chat-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            if (tab === 'broadcast') {
+                document.getElementById('broadcast-chat').classList.remove('hidden');
+            } else if (tab === 'direct') {
+                document.getElementById('direct-chat').classList.remove('hidden');
+            } else if (tab === 'group') {
+                document.getElementById('group-chat').classList.remove('hidden');
+            }
+        }
+
+        // Enter tuşu ile mesaj gönderme
+        function handleKeyPress(event, type) {
+            if (event.key === 'Enter') {
+                if (type === 'broadcast') {
+                    sendBroadcast();
+                } else if (type === 'direct') {
+                    sendDirect();
+                } else if (type === 'group') {
+                    sendGroupMessage();
+                }
+            }
+        }
+
+        // TCP mesajlarını işle
+        function handleTCPMessage(message) {
+            if (message.type === 'login' && message.success) {
+                isLoggedIn = true;
+                
+                // Kullanıcı adını global değişkene kaydet
+                window.currentUsername = message.username;
+                
+                // Header'da kullanıcı adını göster
+                document.getElementById('current-user-display').textContent = `👤 ${message.username}`;
+                
+                // Giriş ekranını gizle, ana içeriği göster
+                document.getElementById('auth-container').style.display = 'none';
+                document.getElementById('main-header').style.display = 'block';
+                document.getElementById('main-content').style.display = 'grid';
+                
+                // Chat container'ı görünür yap
+                document.getElementById('chat-container').style.display = 'block';
+                document.getElementById('chat-container').classList.add('active');
+                
+                addSystemMessage('🎉 Giriş başarılı! Mesajlaşmaya başlayabilirsiniz.');
+                
+                // Çevrimdışı mesajları işle
+                if (message.offline_messages && message.offline_messages.length > 0) {
+                    addSystemMessage(`📬 ${message.offline_count} çevrimdışı mesajınız var:`);
+                    message.offline_messages.forEach(offlineMsg => {
+                        offlineMsg.isOffline = true;
+                        saveMessageToHistory(offlineMsg, offlineMsg.type);
+                        
+                        // Eğer şu anki chat'te ise göster
+                        if (offlineMsg.type === 'broadcast' && currentChat === 'broadcast') {
+                            addMessageToContainer(offlineMsg, offlineMsg.type);
+                        } else if (offlineMsg.type === 'direct' && currentChat.startsWith('direct-')) {
+                            const targetUser = offlineMsg.sender === getCurrentUsername() ? offlineMsg.receiver : offlineMsg.sender;
+                            if (currentChat.endsWith(`-${targetUser}`)) {
+                                addMessageToContainer(offlineMsg, offlineMsg.type);
+                            }
+                        } else if (offlineMsg.type === 'group' && currentChat.startsWith('group-')) {
+                            if (currentChat.endsWith(`-${offlineMsg.group}`)) {
+                                addMessageToContainer(offlineMsg, offlineMsg.type);
+                            }
+                        }
+                    });
+                }
+                
+                // Kullanıcı listesini getir
+                fetch('/api/get_users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+                
+                // Kullanıcının gruplarını getir
+                getUserGroups();
+                
+                // Eski mesajları getir
+                getChatHistory();
+                
+            } else if (message.type === 'broadcast' && message.content) {
+                // Sunucudan gelen mesaj - kendi mesajımız değil
+                if (!message.id) {
+                    message.id = 'server_' + Date.now() + Math.random();
+                }
+                saveMessageToHistory(message, 'broadcast');
+                if (currentChat === 'broadcast') {
+                    addMessageToContainer(message, 'broadcast');
+                }
+            } else if (message.type === 'direct' && message.content) {
+                // Sunucudan gelen mesaj - kendi mesajımız değil
+                if (!message.id) {
+                    message.id = 'server_' + Date.now() + Math.random();
+                }
+                saveMessageToHistory(message, 'direct');
+                const targetUser = message.sender === getCurrentUsername() ? message.receiver : message.sender;
+                if (currentChat.startsWith('direct-') && currentChat.endsWith(`-${targetUser}`)) {
+                    addMessageToContainer(message, 'direct');
+                }
+            } else if (message.type === 'group' && message.content) {
+                // Sunucudan gelen mesaj - kendi mesajımız değil
+                if (!message.id) {
+                    message.id = 'server_' + Date.now() + Math.random();
+                }
+                saveMessageToHistory(message, 'group');
+                if (currentChat.startsWith('group-') && currentChat.endsWith(`-${message.group}`)) {
+                    addMessageToContainer(message, 'group');
+                }
+            } else if (message.type === 'create_group' || message.type === 'join_group') {
+                addSystemMessage(message.message);
+                if (message.success) {
+                    // Grup sohbetini listeye ekle
+                    const groupName = message.group_name || 'Yeni Grup';
+                    addChatToList('group', groupName, groupName);
+                    // Grup sohbetini seç
+                    selectChat('group', groupName);
+                    // Grup listesini yenile
+                    getUserGroups();
+                }
+            } else if (message.type === 'get_all_users' && message.success) {
+                updateUsersList(message.users);
+            } else if (message.type === 'get_user_groups' && message.success) {
+                updateGroupsList(message.groups);
+            } else if (message.type === 'get_chat_history' && message.success) {
+                loadChatHistory(message.messages);
+            }
+        }
+
+        // =============================================================================
+        // MESAJ GÖNDERME FONKSİYONLARI
+        // =============================================================================
+        // Farklı mesaj tiplerini gönderme işlemleri
+        
+        // Herkese mesaj gönderme (broadcast)
+        function sendBroadcast() {
+            const message = document.getElementById('broadcast-message').value;
+            if (message.trim()) {
+                socket.emit('send_broadcast', { message, session_id: sessionId });
+                
+                // Kendi mesajını hemen göster
+                const ownMessage = {
+                    content: message,
+                    sender: getCurrentUsername(),
+                    type: 'broadcast'
+                };
+                saveMessageToHistory(ownMessage, 'broadcast');
+                if (currentChat === 'broadcast') {
+                    addMessageToContainer(ownMessage, 'broadcast');
+                }
+                
+                document.getElementById('broadcast-message').value = '';
+            }
+        }
+
+        function sendDirect() {
+            const receiver = document.getElementById('direct-receiver').value;
+            const message = document.getElementById('direct-message').value;
+            
+            if (!receiver || !receiver.trim()) {
+                showNotification('Önce bir kullanıcı seçin!', 'error');
+                return;
+            }
+            
+            if (!message.trim()) {
+                showNotification('Mesaj yazın!', 'error');
+                return;
+            }
+            
+            socket.emit('send_direct', { receiver, message, session_id: sessionId });
+            
+                // Kendi mesajını hemen göster
+                const ownMessage = {
+                    content: message,
+                    sender: getCurrentUsername(),
+                    receiver: receiver,
+                    type: 'direct'
+                };
+                saveMessageToHistory(ownMessage, 'direct');
+                if (currentChat === `direct-${receiver}`) {
+                    addMessageToContainer(ownMessage, 'direct');
+                }
+            
+            document.getElementById('direct-message').value = '';
+        }
+
+        function sendGroupMessage() {
+            const groupName = document.getElementById('group-name').value;
+            const message = document.getElementById('group-message').value;
+            
+            if (!groupName || !groupName.trim()) {
+                showNotification('Önce bir grup seçin veya oluşturun!', 'error');
+                return;
+            }
+            
+            if (!message.trim()) {
+                showNotification('Mesaj yazın!', 'error');
+                return;
+            }
+            
+            socket.emit('send_group_message', { group_name: groupName, message, session_id: sessionId });
+            
+                // Kendi mesajını hemen göster
+                const ownMessage = {
+                    content: message,
+                    sender: getCurrentUsername(),
+                    group: groupName,
+                    type: 'group'
+                };
+                saveMessageToHistory(ownMessage, 'group');
+                if (currentChat === `group-${groupName}`) {
+                    addMessageToContainer(ownMessage, 'group');
+                }
+            
+            document.getElementById('group-message').value = '';
+        }
+
+        // Mevcut kullanıcı adını al
+        function getCurrentUsername() {
+            // Global değişkenden kullanıcı adını al
+            return window.currentUsername || null;
+        }
+
+        // Kullanıcı listesini güncelle
+        function updateUsersList(users) {
+            const usersList = document.getElementById('users-list');
+            usersList.innerHTML = '';
+            
+            if (users.length === 0) {
+                usersList.innerHTML = '<div class="user-item offline"><div class="user-status"></div><div class="user-name">Kullanıcı yok</div></div>';
+                return;
+            }
+            
+            users.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.className = `user-item ${user.online ? 'online' : 'offline'}`;
+                userDiv.innerHTML = `
+                    <div class="user-status"></div>
+                    <div class="user-name">${user.username}</div>
+                `;
+                
+                // Kullanıcıya tıklayınca özel sohbet aç
+                userDiv.onclick = () => {
+                    if (user.username !== getCurrentUsername()) {
+                        // Önce sohbet listesine ekle
+                        addChatToList('direct', user.username, user.username);
+                        // Sonra sohbeti seç
+                        selectChat('direct', user.username);
+                    }
+                };
+                
+                usersList.appendChild(userDiv);
+            });
+        }
+
+        // Sohbet listesine yeni sohbet ekle
+        function addChatToList(chatType, chatId, displayName) {
+            const chatList = document.getElementById('chat-list');
+            
+            // Zaten var mı kontrol et
+            const existingChat = document.querySelector(`[data-chat-id="${chatType}-${chatId}"]`);
+            if (existingChat) return;
+            
+            const chatDiv = document.createElement('div');
+            chatDiv.className = 'chat-item';
+            chatDiv.setAttribute('data-chat-id', `${chatType}-${chatId}`);
+            
+            let icon = '💬';
+            if (chatType === 'direct') icon = '💌';
+            else if (chatType === 'group') icon = '👥';
+            
+            chatDiv.innerHTML = `
+                <div class="chat-icon">${icon}</div>
+                <div class="chat-info">
+                    <div class="chat-name">${displayName}</div>
+                    <div class="chat-last-message">Yeni sohbet</div>
+                </div>
+            `;
+            
+            chatDiv.onclick = () => selectChat(chatType, chatId);
+            
+            chatList.appendChild(chatDiv);
+        }
+
+        // Mesaj geçmişini kaydet
+        function saveMessageToHistory(message, type) {
+            // Mesaja benzersiz ID ekle
+            if (!message.id) {
+                message.id = Date.now() + Math.random();
+            }
+            
+            if (type === 'broadcast') {
+                chatHistory.broadcast.push(message);
+            } else if (type === 'direct') {
+                const targetUser = message.sender === getCurrentUsername() ? message.receiver : message.sender;
+                if (!chatHistory.direct[targetUser]) {
+                    chatHistory.direct[targetUser] = [];
+                }
+                chatHistory.direct[targetUser].push(message);
+            } else if (type === 'group') {
+                if (!chatHistory.group[message.group]) {
+                    chatHistory.group[message.group] = [];
+                }
+                chatHistory.group[message.group].push(message);
+            }
+            
+            // localStorage'a kaydet
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+        }
+
+        // Grup listesini güncelle
+        function updateGroupsList(groups) {
+            const groupsList = document.getElementById('groups-list');
+            const noGroups = document.getElementById('no-groups');
+            
+            if (groups.length === 0) {
+                if (!noGroups) {
+                    groupsList.innerHTML = `
+                        <div class="group-item" id="no-groups">
+                            <div class="group-icon">👥</div>
+                            <div class="group-name">Grup yok</div>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            // "Grup yok" mesajını kaldır
+            if (noGroups) {
+                noGroups.remove();
+            }
+            
+            groups.forEach(group => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'group-item clickable';
+                groupDiv.innerHTML = `
+                    <div class="group-icon">👥</div>
+                    <div class="group-name">${group.group_name}</div>
+                `;
+                
+                // Gruba tıklayınca grup sohbetini aç
+                groupDiv.onclick = () => {
+                    selectChat('group', group.group_name);
+                    addChatToList('group', group.group_name, group.group_name);
+                };
+                
+                groupsList.appendChild(groupDiv);
+            });
+        }
+
+        // Kullanıcının gruplarını getir
+        function getUserGroups() {
+            // TCP sunucusundan kullanıcının gruplarını iste
+            fetch('/api/get_user_groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            });
+        }
+
+        // Eski mesajları getir
+        function getChatHistory() {
+            // TCP sunucusundan eski mesajları iste
+            fetch('/api/get_chat_history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            });
+        }
+
+        // Eski mesajları yükle
+        function loadChatHistory(messages) {
+            console.log(`📜 ${messages.length} eski mesaj yükleniyor...`);
+            
+            // Önce mevcut chat history'yi temizle (sadece bu oturum için)
+            const currentUsername = getCurrentUsername();
+            if (currentUsername) {
+                // Kullanıcıya özel mesajları filtrele
+                messages.forEach(msg => {
+                    // Mesaj geçmişine kaydet (duplikasyon kontrolü ile)
+                    const messageId = msg.id || `history_${Date.now()}_${Math.random()}`;
+                    msg.id = messageId;
+                    
+                    // Duplikasyon kontrolü
+                    let shouldAdd = false;
+                    
+                    if (msg.type === 'broadcast') {
+                        // Broadcast mesajları - zaten var mı kontrol et
+                        const exists = chatHistory.broadcast.some(existing => 
+                            existing.content === msg.content && 
+                            existing.sender === msg.sender && 
+                            existing.timestamp === msg.timestamp
+                        );
+                        if (!exists) {
+                            chatHistory.broadcast.push(msg);
+                            shouldAdd = true;
+                        }
+                    } else if (msg.type === 'direct') {
+                        const targetUser = msg.sender === currentUsername ? msg.receiver : msg.sender;
+                        if (!chatHistory.direct[targetUser]) {
+                            chatHistory.direct[targetUser] = [];
+                        }
+                        const exists = chatHistory.direct[targetUser].some(existing => 
+                            existing.content === msg.content && 
+                            existing.sender === msg.sender && 
+                            existing.timestamp === msg.timestamp
+                        );
+                        if (!exists) {
+                            chatHistory.direct[targetUser].push(msg);
+                            shouldAdd = true;
+                        }
+                    } else if (msg.type === 'group') {
+                        if (!chatHistory.group[msg.group]) {
+                            chatHistory.group[msg.group] = [];
+                        }
+                        const exists = chatHistory.group[msg.group].some(existing => 
+                            existing.content === msg.content && 
+                            existing.sender === msg.sender && 
+                            existing.timestamp === msg.timestamp
+                        );
+                        if (!exists) {
+                            chatHistory.group[msg.group].push(msg);
+                            shouldAdd = true;
+                        }
+                    }
+                });
+            }
+            
+            // localStorage'a kaydet
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            
+            // Şu anki sohbeti yenile
+            if (currentChat === 'broadcast') {
+                displayChatHistory('broadcast');
+            } else if (currentChat.startsWith('direct-')) {
+                const targetUser = currentChat.split('-')[1];
+                displayChatHistory('direct', targetUser);
+            } else if (currentChat.startsWith('group-')) {
+                const groupName = currentChat.split('-')[1];
+                displayChatHistory('group', groupName);
+            }
+            
+            showNotification(`📜 ${messages.length} eski mesaj yüklendi`, 'success');
+        }
+
+        // Sistem mesajı ekleme
+        function addSystemMessage(text) {
+            const container = document.getElementById('messages-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system';
+            messageDiv.textContent = text;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Bildirim gösterme
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Sohbet seçme
+        function selectChat(chatType, targetUser = null) {
+            currentChat = targetUser ? `${chatType}-${targetUser}` : chatType;
+            
+            // Tüm chat item'larından active class'ı kaldır
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Seçilen chat item'ına active class ekle
+            if (event && event.target) {
+                event.target.closest('.chat-item').classList.add('active');
+            }
+            
+            // Chat başlığını güncelle
+            const chatTitle = document.getElementById('chat-title');
+            if (chatType === 'broadcast') {
+                chatTitle.textContent = '💬 Herkese';
+                showChatSection('broadcast');
+                // Input alanlarını temizle
+                document.getElementById('direct-receiver').value = '';
+                document.getElementById('group-name').value = '';
+            } else if (chatType === 'direct') {
+                chatTitle.textContent = `💌 ${targetUser}`;
+                showChatSection('direct');
+                // Alıcı adını doldur
+                document.getElementById('direct-receiver').value = targetUser;
+                document.getElementById('group-name').value = '';
+            } else if (chatType === 'group') {
+                chatTitle.textContent = `👥 ${targetUser}`;
+                showChatSection('group');
+                // Grup adını doldur
+                document.getElementById('group-name').value = targetUser;
+                document.getElementById('direct-receiver').value = '';
+            }
+            
+            // Mesaj geçmişini göster
+            displayChatHistory(chatType, targetUser);
+        }
+
+        // Chat bölümünü göster
+        function showChatSection(section) {
+            document.querySelectorAll('.chat-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            if (section === 'broadcast') {
+                document.getElementById('broadcast-chat').classList.add('active');
+            } else if (section === 'direct') {
+                document.getElementById('direct-chat').classList.add('active');
+            } else if (section === 'group') {
+                document.getElementById('group-chat').classList.add('active');
+            }
+        }
+
+        // Mesaj geçmişini göster
+        function displayChatHistory(chatType, targetUser = null) {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '';
+            
+            let messages = [];
+            if (chatType === 'broadcast') {
+                messages = chatHistory.broadcast;
+            } else if (chatType === 'direct' && targetUser) {
+                messages = chatHistory.direct[targetUser] || [];
+            } else if (chatType === 'group' && targetUser) {
+                messages = chatHistory.group[targetUser] || [];
+            }
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<div class="message system">Henüz mesaj yok...</div>';
+            } else {
+                messages.forEach(msg => {
+                    addMessageToContainer(msg, chatType);
+                });
+            }
+            
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Mesajı container'a ekle
+        function addMessageToContainer(message, type) {
+            const container = document.getElementById('messages-container');
+            
+            // Duplikasyon kontrolü - aynı ID'li mesaj var mı?
+            if (message.id) {
+                const existingMessage = container.querySelector(`[data-message-id="${message.id}"]`);
+                if (existingMessage) {
+                    return; // Mesaj zaten var, ekleme
+                }
+            }
+            
+            const messageDiv = document.createElement('div');
+            
+            const isOwnMessage = message.sender === getCurrentUsername();
+            let messageClass = isOwnMessage ? `message ${type} own` : `message ${type}`;
+            
+            if (message.isOffline) {
+                messageClass += ' offline';
+            }
+            
+            messageDiv.className = messageClass;
+            
+            // Mesaj ID'sini data attribute olarak ekle
+            if (message.id) {
+                messageDiv.setAttribute('data-message-id', message.id);
+            }
+            
+            const header = document.createElement('div');
+            header.className = 'message-header';
+            
+            if (type === 'broadcast') {
+                header.innerHTML = isOwnMessage ? `📢 Sen` : `📢 ${message.sender}`;
+            } else if (type === 'direct') {
+                header.innerHTML = isOwnMessage ? `💌 Sen` : `💌 ${message.sender}`;
+            } else if (type === 'group') {
+                header.innerHTML = isOwnMessage ? `👥 ${message.group} - Sen` : `👥 ${message.group} - ${message.sender}`;
+            }
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = message.content;
+            
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            time.textContent = new Date().toLocaleTimeString();
+            
+            messageDiv.appendChild(header);
+            messageDiv.appendChild(content);
+            messageDiv.appendChild(time);
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+    </script>
+</body>
+</html>

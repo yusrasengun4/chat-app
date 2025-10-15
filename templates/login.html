@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Giriş Yap</h3>
+
+<form id="loginForm">
+  <label for="username">Kullanıcı Adı:</label>
+  <input type="text" id="username" placeholder="Kullanıcı adı" required>
+
+  <label for="password">Şifre:</label>
+  <input type="password" id="password" placeholder="Şifre" required>
+
+  <button type="submit">Giriş Yap</button>
+</form>
+
+<p>Hesabın yok mu? <a href="/auth/register">Kayıt Ol</a></p>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  
+  const response = await fetch('/auth/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ username, password })
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    alert("Giriş başarılı!");
+    window.location.href = "/chat"; // yönlendir
+  } else {
+    alert(data.message);
+  }
+});
+</script>
+
+{% endblock %}
